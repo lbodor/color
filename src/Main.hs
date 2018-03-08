@@ -1,39 +1,47 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 module Main where
 
-import           Control.Lens       (over, (^?))
-import           Data.List.Split    (chunksOf)
-import           Numeric            (readHex, showHex)
-import           System.Environment (getArgs)
-import           System.IO          (IOMode (..), hPutStrLn, withFile)
-import           Text.Regex.Lens    (matchedString, regex)
-import           Text.Regex.PCRE    (Regex, makeRegex, (=~))
-import           Text.Regex.Quote   (r)
+import           Control.Lens               (over, (^?))
+import           Data.Int                   (Int64)
+import           Data.List                  (unfoldr)
+import           Data.Monoid                ((<>))
+import           Numeric                    (readHex, showHex)
+import           System.Environment         (getArgs)
+import           System.IO                  (IOMode (..), hPutStrLn, withFile)
+import           Text.Regex.Lens            (matchedString, regex)
+import           Text.Regex.PCRE            (Regex, makeRegex, (=~))
+import           Text.Regex.Quote           (r)
+
+import qualified Data.ByteString.Lazy.Char8 as BSL
 
 main :: IO ()
 main = do
     [inputFile, outputFile] <- getArgs
-    contents <- lines <$> readFile inputFile
+    contents <- BSL.lines <$> BSL.readFile inputFile
     withFile outputFile WriteMode $ \f ->
-        mapM_ (hPutStrLn f . scaleLine 0.5) contents
+        mapM_ (BSL.hPutStrLn f . scaleLine 0.5) contents
 
-scaleLine :: Float -> String -> String
+scaleLine :: Float -> BSL.ByteString -> BSL.ByteString
 scaleLine factor = over (regex [r|(?i)#[0-9a-f]{6}|] . matchedString) (scaleRGB factor)
 
-scaleRGB :: Float -> String -> String
-scaleRGB factor (_:rgb) =
-    "#" ++ concatMap (showHex' . scale' . readHex') (chunksOf 2 rgb)
+scaleRGB :: Float -> BSL.ByteString -> BSL.ByteString
+scaleRGB factor (BSL.tail -> rgb) =
+    "#" <> BSL.concat (map (showHex' . scale' . readHex') (chunksOf 2 rgb))
   where
     scale' = min 255 . round . (* factor) . fromIntegral
 
-readHex' :: String -> Integer
-readHex' = fst . head . readHex
+chunksOf :: Int64 -> BSL.ByteString -> [BSL.ByteString]
+chunksOf n = unfoldr (\bs -> if BSL.null bs then Nothing else Just (BSL.splitAt n bs))
 
-showHex' :: Integer -> String
-showHex' n = case length hex of
+readHex' :: BSL.ByteString -> Integer
+readHex' = fst . head . readHex . BSL.unpack
+
+showHex' :: Integer -> BSL.ByteString
+showHex' n = case BSL.length hex of
     2 -> hex
-    1 -> '0':hex
+    1 -> '0' `BSL.cons` hex
   where
-    hex = showHex n ""
-
+    hex = BSL.pack (showHex n "")
