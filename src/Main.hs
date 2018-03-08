@@ -25,7 +25,7 @@ main = do
         mapM_ (BSL.hPutStrLn f . scaleLine 0.5) contents
 
 scaleLine :: Float -> BSL.ByteString -> BSL.ByteString
-scaleLine factor = over (regex [r|(?i)#[0-9a-f]{6}|] . matchedString) (scaleRGB factor)
+scaleLine factor = over (regex [r|(?i)#[\da-f]{6}|] . matchedString) (scaleRGB factor)
 
 scaleRGB :: Float -> BSL.ByteString -> BSL.ByteString
 scaleRGB factor (BSL.tail -> rgb) =
