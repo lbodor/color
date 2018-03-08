@@ -19,10 +19,10 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 
 main :: IO ()
 main = do
-    [inputFile, outputFile] <- getArgs
+    [inputFile, read -> factor, outputFile] <- getArgs
     contents <- BSL.lines <$> BSL.readFile inputFile
     withFile outputFile WriteMode $ \f ->
-        mapM_ (BSL.hPutStrLn f . scaleLine 0.5) contents
+        mapM_ (BSL.hPutStrLn f . scaleLine factor) contents
 
 scaleLine :: Float -> BSL.ByteString -> BSL.ByteString
 scaleLine factor = over (regex [r|(?i)#[\da-f]{6}|] . matchedString) (scaleRGB factor)
